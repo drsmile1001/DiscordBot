@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using DiscordBot.Model;
 using DiscordBot.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +37,8 @@ namespace DiscordBot
                 .AddSingleton(new ConfigurationBuilder()
                     .SetBasePath(AppContext.BaseDirectory)
                     .AddJsonFile("appSettings.json", true, true)
-                    .Build());
+                    .Build())
+                .AddSingleton<DiscordBotDb>();
 
             var provider = services.BuildServiceProvider();
             provider.GetRequiredService<LoggingService>();
