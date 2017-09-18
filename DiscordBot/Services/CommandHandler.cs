@@ -38,8 +38,29 @@ namespace DiscordBot.Services
                 msg.HasMentionPrefix(Discord.CurrentUser, ref argPos))
             {
                 var result = await Command.ExecuteAsync(context, argPos, Provider);
+
                 if (!result.IsSuccess)
+                {
+                    switch (result.Error)
+                    {
+                        case CommandError.UnknownCommand:
+                            return;
+                        case CommandError.ParseFailed:
+                        case CommandError.BadArgCount:
+                            break;
+                        case CommandError.ObjectNotFound:
+                        case CommandError.MultipleMatches:
+                        case CommandError.UnmetPrecondition:
+                        case CommandError.Exception:
+                        case CommandError.Unsuccessful:
+                        case null:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                     await context.Channel.SendMessageAsync(result.ToString());
+                }
+                    
             }
         }
     }
