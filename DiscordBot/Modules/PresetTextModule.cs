@@ -319,10 +319,14 @@ namespace DiscordBot.Modules
                 builder.AddField(x =>
                 {
                     x.Name = group.Description;
-                    x.Value = $"字串:\"{group.Text}\"\n" +
-                              $"使用次數:{group.UseCount}\n"
-                              + group.Grouping.Select(item => $"{item.Index} #{item.SubIndex}")
-                                  .Aggregate((agg, next) => $"{agg}\n{next}");
+                    var meta = $"使用次數:{group.UseCount}\n"
+                               + group.Grouping.Select(item => $"{item.Index} #{item.SubIndex}")
+                                   .Aggregate((agg, next) => $"{agg}\n{next}");
+                    var allowLength = 1024 - meta.Length - 20;
+                    var showText = group.Text.Length >= allowLength
+                        ? $"{group.Text.Substring(0, allowLength)}..."
+                        : group.Text;
+                    x.Value = $"字串:{showText}\n" + meta;
                     x.IsInline = false;
                 });
             return ReplyAsync("", false, builder.Build());
