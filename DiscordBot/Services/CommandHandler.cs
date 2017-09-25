@@ -30,7 +30,8 @@ namespace DiscordBot.Services
         private async Task OnMessageReceivedAsync(SocketMessage socketMessage)
         {
             if (!(socketMessage is SocketUserMessage msg)) return;
-            if (msg.Author == Discord.CurrentUser) return;
+            if (msg.Author.Id == Discord.CurrentUser.Id) return;
+            if (msg.Author.IsBot) return;
 
             var context = new SocketCommandContext(Discord, msg);
             var argPos = 0;
