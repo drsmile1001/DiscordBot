@@ -269,14 +269,17 @@ namespace DiscordBot.Modules
             if (similarity < SimilarityThreshold)
                 return ReplyAsync("找不到接近的 怕:confounded:");
 
-            var pool = founds.AsParallel()
+            var found = founds.AsParallel()
                 .GroupBy(item => item.Text)
                 .Select(grouping => grouping.OrderByDescending(item => item.LastUseTime).First())
-                .ToList();
-
-            var rdIndex = Random.Next(0, pool.Count);
-            var found = pool[rdIndex];
-
+                .OrderByDescending(item => item.LastUseTime)
+                .Select((item, i) => new
+                {
+                    Weights = (i * 0.9 / founds.Count + 0.1) * Random.NextDouble(),
+                    PresetText = item
+                })
+                .OrderByDescending(item => item.Weights)
+                .FirstOrDefault().PresetText;
             return ReplyPresetText(found, similarity);
         }
 
