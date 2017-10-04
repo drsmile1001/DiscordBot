@@ -1,16 +1,11 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using LiteDB;
 
 namespace DiscordBot.Model
 {
     public class DiscordBotDb : LiteRepository
     {
-        public DiscordBotDb() : base(new ConnectionString
-        {
-            Filename = Path.Combine(AppContext.BaseDirectory, "discordBotDb.db"),
-            LimitSize = 1024 * 1024 * 100
-        })
+        public DiscordBotDb(Stream stream, BsonMapper mapper = null, string password = null) : base(stream, mapper, password)
         {
         }
     }
