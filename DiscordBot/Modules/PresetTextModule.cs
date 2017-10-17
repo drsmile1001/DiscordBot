@@ -74,7 +74,7 @@ namespace DiscordBot.Modules
 
                     return new
                     {
-                        Similarity = similarity * 0.5 + reverseSimilarity * 0.45 + extensionSimilarity * 0.05,
+                        Similarity = similarity * 0.49 + reverseSimilarity * 0.49 + extensionSimilarity * 0.02,
                         IndexGrouping = indexGrouping
                     };
                 })
