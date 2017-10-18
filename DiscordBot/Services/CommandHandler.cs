@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -38,30 +39,44 @@ namespace DiscordBot.Services
             if (msg.HasStringPrefix(Config["prefix"], ref argPos) ||
                 msg.HasMentionPrefix(Discord.CurrentUser, ref argPos))
             {
-                var result = await Command.ExecuteAsync(context, argPos, Provider);
+                await ExecuteCommand(context, context.Message.Content.Substring(argPos));
+                return;
+            }
+            var command = context.Message.Content.Split('\r', '\n')
+                .FirstOrDefault(line => line.StartsWith(Config["prefix"]));
+            if (command != null)
+                await ExecuteCommand(context, command.Substring(Config["prefix"].Length));
+        }
 
-                if (!result.IsSuccess)
+        /// <summary>
+        /// 執行命令
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        private async Task ExecuteCommand(SocketCommandContext context, string input)
+        {
+            var result = await Command.ExecuteAsync(context, input, Provider);
+            if (!result.IsSuccess)
+            {
+                switch (result.Error)
                 {
-                    switch (result.Error)
-                    {
-                        case CommandError.UnknownCommand:
-                            return;
-                        case CommandError.ParseFailed:
-                        case CommandError.BadArgCount:
-                            break;
-                        case CommandError.ObjectNotFound:
-                        case CommandError.MultipleMatches:
-                        case CommandError.UnmetPrecondition:
-                        case CommandError.Exception:
-                        case CommandError.Unsuccessful:
-                        case null:
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                    await context.Channel.SendMessageAsync(result.ToString());
+                    case CommandError.UnknownCommand:
+                        return;
+                    case CommandError.ParseFailed:
+                    case CommandError.BadArgCount:
+                        break;
+                    case CommandError.ObjectNotFound:
+                    case CommandError.MultipleMatches:
+                    case CommandError.UnmetPrecondition:
+                    case CommandError.Exception:
+                    case CommandError.Unsuccessful:
+                    case null:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
-                    
+                await context.Channel.SendMessageAsync(result.ToString());
             }
         }
     }
