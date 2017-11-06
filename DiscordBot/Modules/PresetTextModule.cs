@@ -359,5 +359,49 @@ namespace DiscordBot.Modules
                 return ReplyAsync(e.Message);
             }
         }
+
+        [Command("analyzePresetText")]
+        [Alias("+.?")]
+        [Summary("分析預存字串")]
+        public Task AnalyzePresetText()
+        {
+            var allPresetText = DiscordBotDb.Query<PresetText>().ToList();
+            var toTextCount = allPresetText.Select(text => text.Text).Distinct().Count();
+            var builder = new EmbedBuilder
+            {
+                Title = $"預存字串共{allPresetText.Count}筆索引，指向{toTextCount}筆字串"
+            };
+            var creatorGroupingBy = allPresetText.GroupBy(text => text.CreateUser).Select(grouping => new
+                {
+                    Creator = grouping.Key,
+                    Count = grouping.Count()
+                })
+                .OrderByDescending(item => item.Count)
+                .ToList();
+            foreach (var item in creatorGroupingBy)
+                builder.AddField(item.Creator, $"{item.Count}筆", true);
+            return ReplyAsync("", false, builder.Build());
+        }
+
+        [Command("analyzePresetText")]
+        [Alias("+.?")]
+        [Summary("分析預存字串(建立人)")]
+        public Task AnalyzePresetText([Summary("建立人")] string creator)
+        {
+            var presetTexts = DiscordBotDb.Query<PresetText>().ToList()
+                .Where(text => text.CreateUser == creator)
+                .ToList();
+            if (presetTexts.Count == 0)
+                return ReplyAsync("查無此使用者或此使用者未建立任何預存字串");
+            var toTextCount = presetTexts.Select(text => text.Text).Distinct().Count();
+            var description = string.Join(',', presetTexts.OrderByDescending(text=>text.UseCount)
+                .Select(text => $"{text.Index}#{text.SubIndex}"));
+            var builder = new EmbedBuilder
+            {
+                Title = $"{creator}建立的預存字串共{presetTexts.Count}筆索引，指向{toTextCount}筆字串",
+                Description = description.Length > 2048? description.Substring(0,2040) + "..." : description
+            };
+            return ReplyAsync("", false, builder.Build());
+        }
     }
 }
