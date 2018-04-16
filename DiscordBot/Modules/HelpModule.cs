@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 
 namespace DiscordBot.Modules
@@ -10,15 +11,19 @@ namespace DiscordBot.Modules
     public class HelpModule : ModuleBase<SocketCommandContext>
     {
         public HelpModule(CommandService service,
-            IConfigurationRoot config)
+            IConfigurationRoot config,
+            DiscordSocketClient client)
         {
             Service = service;
             Config = config;
+            Client = client;
         }
 
         private CommandService Service { get; }
 
         private IConfigurationRoot Config { get; }
+
+        private DiscordSocketClient Client { get; }
 
         [Command("help")]
         [Alias("?")]
@@ -92,6 +97,14 @@ namespace DiscordBot.Modules
             }
 
             await ReplyAsync("", false, builder.Build());
+        }
+
+        [Command("game")]
+        [Alias("g")]
+        [Summary("設定bot在玩的遊戲")]
+        public async Task GameAsync([Summary("遊戲名稱")] string game)
+        {
+            await Client.SetGameAsync(game);
         }
     }
 }
