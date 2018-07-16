@@ -313,12 +313,14 @@ namespace DiscordBot.Modules
         [Command("listPresetText")]
         [Alias("+.")]
         [Summary("列出預存字串")]
-        public Task ListPresetText([Summary("分頁")] [Optional] string tab)
+        public Task ListPresetText([Summary("分頁")] [Optional] string tab, [Optional] string index)
         {
             if (!int.TryParse(tab, out var tabInt))
                 tabInt = 1;
 
             var allPresetText = DiscordBotDb.Query<PresetText>().ToList();
+            if (!string.IsNullOrWhiteSpace(index))
+                allPresetText = allPresetText.Where(preset => preset.Index.Contains(index)).ToList();
 
             var source = allPresetText.AsParallel()
                 .GroupBy(item => item.Text)
