@@ -258,6 +258,33 @@ namespace DiscordBot.Modules
             return ReplyAsync("", false, singleBuilder.Build());
         }
 
+        [Command("editPresetText")]
+        [Alias("+=")]
+        [Summary("編輯預存字串索引")]
+        public Task EditPresetText([Summary("索引")] string index, [Summary("流水號")] string subIndex,
+            [Summary("新索引")] string newIndex)
+        {
+            if (!int.TryParse(subIndex, out var subIndexInt))
+                return ReplyAsync("流水號應為整數");
+
+            var found =
+                DiscordBotDb.FirstOrDefault<PresetText>(
+                    text => text.Index == index && text.SubIndex == subIndexInt);
+            if (found == null)
+                return ReplyAsync($"找不到 {index} #{subIndex}");
+
+            var newSubIndex = DiscordBotDb.Query<PresetText>()
+                .Where(presetText => presetText.Index == newIndex)
+                .ToList()
+                .Select(preset=>preset.SubIndex)
+                .DefaultIfEmpty(-1)
+                .Max() + 1;
+            found.Index = newIndex;
+            found.SubIndex = newSubIndex;
+            DiscordBotDb.Update(found);
+            return ReplyAsync($"已更新[{index} #{subIndex}]為[{newIndex} #{newSubIndex}]");
+        }
+
         [Command("randomPresetText")]
         [Alias("+*")]
         [Summary("亂數輸出儲存過的字串")]
