@@ -17,21 +17,18 @@ namespace DiscordBot.Model
         /// <summary>
         /// 查詢用的索引
         /// </summary>
-        [BsonIndex(false)]
         [BsonField]
         public string Index { get; set; }
 
         /// <summary>
         /// 多圖的流水號
         /// </summary>
-        [BsonIndex(false)]
         [BsonField]
         public int SubIndex { get; set; }
 
         /// <summary>
         /// 儲存的字串
         /// </summary>
-        [BsonIndex(false)]
         [BsonField]
         public string Text { get; set; }
 
@@ -44,7 +41,6 @@ namespace DiscordBot.Model
         /// <summary>
         /// 最後使用時間
         /// </summary>
-        [BsonIndex(false)]
         [BsonField]
         public DateTime LastUseTime { get; set; }
 
@@ -57,7 +53,6 @@ namespace DiscordBot.Model
         /// <summary>
         /// 新增的使用者
         /// </summary>
-        [BsonIndex(false)]
         [BsonField]
         public string CreateUser { get; set; }
     }
