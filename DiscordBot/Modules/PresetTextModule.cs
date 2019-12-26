@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 using DiscordBot.Model;
 using F23.StringSimilarity;
 
@@ -431,6 +432,34 @@ namespace DiscordBot.Modules
                 Description = description.Length > 2048? description.Substring(0,2040) + "..." : description
             };
             return ReplyAsync("", false, builder.Build());
+        }
+
+        [Command("police")]
+        [Summary("通報警察")]
+        public async Task Test([Summary("訊息ID")] ulong id)
+        {
+            var message = await Context.Channel.GetMessageAsync(id);
+            var a = message as IUserMessage;
+            var emojis = new[]
+            {
+                "🚓",
+                "🚔",
+                "👮",
+                "👮‍♂️",
+                "👮‍♀️",
+                "🐔",
+                "🦆",
+                "🕵️",
+                "🕵️‍♂️",
+                "🕵️‍♀️",
+                "🇫",
+                "🇧",
+                "🇮"
+            };
+            foreach (var emoji in emojis)
+            {
+                await a.AddReactionAsync(new Emoji(emoji));
+            }
         }
     }
 }
