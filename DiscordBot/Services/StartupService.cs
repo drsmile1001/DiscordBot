@@ -12,9 +12,11 @@ namespace DiscordBot.Services
     {
         public StartupService(DiscordSocketClient discord,
             CommandService command,
-            IConfigurationRoot config)
+            IConfigurationRoot config,
+            IServiceProvider services)
         {
             Config = config;
+            Services = services;
             Discord = discord;
             Command = command;
         }
@@ -24,6 +26,7 @@ namespace DiscordBot.Services
         private CommandService Command { get; }
 
         private IConfigurationRoot Config { get; }
+        public IServiceProvider Services { get; }
 
         public async Task StartAsync()
         {
@@ -32,7 +35,7 @@ namespace DiscordBot.Services
                 throw new Exception("需要在appSettings.json的tokens.discord中存放Bot的token");
             await Discord.LoginAsync(TokenType.Bot, discordToken);
             await Discord.StartAsync();
-            await Command.AddModulesAsync(Assembly.GetEntryAssembly());
+            await Command.AddModulesAsync(Assembly.GetEntryAssembly(), Services);
         }
     }
 }
