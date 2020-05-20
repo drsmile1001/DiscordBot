@@ -1,16 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
+using DiscordBotServer.Entities;
+using DiscordBotServer.Services;
+using DiscordBotServer.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using System;
 
 namespace DiscordBotServer
 {
@@ -27,6 +28,21 @@ namespace DiscordBotServer
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            services.AddDbContext<AppDbContext>(config => config.UseSqlite("Data Source=discord.db"));
+            services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
+            {
+                LogLevel = LogSeverity.Info,
+                MessageCacheSize = 1000
+            }));
+            services.AddSingleton(new CommandService(new CommandServiceConfig
+            {
+                DefaultRunMode = RunMode.Async,
+                LogLevel = LogSeverity.Info
+            }));
+            services.AddSingletonHostedService<DiscordLoggingService>();
+            services.AddSingletonHostedService<CommandHandler>();
+            services.AddSingletonHostedService<StartupService>();
+            services.AddSingleton(new Random(Guid.NewGuid().GetHashCode()));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -48,7 +64,7 @@ namespace DiscordBotServer
                 endpoints.MapControllers();
             });
 
-            app.Run(handler => handler.Response.WriteAsync(Configuration.GetValue<string>("EnvWord")));
+            app.Run(handler => handler.Response.WriteAsync("discord-bot-server"));
         }
     }
 }
