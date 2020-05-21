@@ -22,16 +22,16 @@ namespace DiscordBotServer.Controllers
 
         // GET: api/PresetTexts
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PresetText>>> GetPresetText()
+        public async Task<ActionResult<IEnumerable<MessagePreset>>> GetPresetText()
         {
-            return await _context.PresetText.AsQueryable().ToArrayAsync();
+            return await _context.MessagePreset.AsQueryable().ToArrayAsync();
         }
 
         // GET: api/PresetTexts/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<PresetText>> GetPresetText(string id)
+        public async Task<ActionResult<MessagePreset>> GetPresetText(string id)
         {
-            var presetText = await _context.PresetText.FindAsync(id);
+            var presetText = await _context.MessagePreset.FindAsync(id);
 
             if (presetText == null)
             {
@@ -45,7 +45,7 @@ namespace DiscordBotServer.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutPresetText(string id, PresetText presetText)
+        public async Task<IActionResult> PutPresetText(string id, MessagePreset presetText)
         {
             if (id != presetText.Id)
             {
@@ -77,9 +77,9 @@ namespace DiscordBotServer.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<PresetText>> PostPresetText(PresetText presetText)
+        public async Task<ActionResult<MessagePreset>> PostPresetText(MessagePreset presetText)
         {
-            _context.PresetText.Add(presetText);
+            _context.MessagePreset.Add(presetText);
             try
             {
                 await _context.SaveChangesAsync();
@@ -101,15 +101,15 @@ namespace DiscordBotServer.Controllers
 
         // DELETE: api/PresetTexts/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult<PresetText>> DeletePresetText(string id)
+        public async Task<ActionResult<MessagePreset>> DeletePresetText(string id)
         {
-            var presetText = await _context.PresetText.FindAsync(id);
+            var presetText = await _context.MessagePreset.FindAsync(id);
             if (presetText == null)
             {
                 return NotFound();
             }
 
-            _context.PresetText.Remove(presetText);
+            _context.MessagePreset.Remove(presetText);
             await _context.SaveChangesAsync();
 
             return presetText;
@@ -117,7 +117,7 @@ namespace DiscordBotServer.Controllers
 
         private bool PresetTextExists(string id)
         {
-            return _context.PresetText.Any(e => e.Id == id);
+            return _context.MessagePreset.Any(e => e.Id == id);
         }
     }
 }

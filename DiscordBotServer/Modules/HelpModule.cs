@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using DiscordBotServer.Utilities;
 using Microsoft.Extensions.Configuration;
 
 namespace DiscordBotServer.Modules
@@ -97,11 +98,17 @@ namespace DiscordBotServer.Modules
         }
 
         [Command("game")]
-        [Alias("g")]
         [Summary("設定bot在玩的遊戲")]
         public async Task GameAsync([Summary("遊戲名稱")] string game)
         {
             await _discordSocketClient.SetGameAsync(game);
+        }
+
+        [Command("echo")]
+        [Summary("回傳使用者輸入訊息")]
+        public async Task EchoAsync([Summary("訊息")] string message)
+        {
+            await ReplyAsync(message);
         }
     }
 }

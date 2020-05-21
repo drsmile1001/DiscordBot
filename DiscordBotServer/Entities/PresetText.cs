@@ -2,7 +2,7 @@
 
 namespace DiscordBotServer.Entities
 {
-    public class PresetText
+    public class MessagePreset
     {
         /// <summary>
         /// ID
@@ -15,7 +15,7 @@ namespace DiscordBotServer.Entities
         public string Index { get; set; }
 
         /// <summary>
-        /// 多圖的流水號
+        /// 重複索引的流水號
         /// </summary>
         public int SubIndex { get; set; }
 
@@ -32,7 +32,7 @@ namespace DiscordBotServer.Entities
         /// <summary>
         /// 最後使用時間
         /// </summary>
-        public DateTimeOffset LastUseTime { get; set; }
+        public DateTime LastUseTime { get; set; }
 
         /// <summary>
         /// 最後的使用者

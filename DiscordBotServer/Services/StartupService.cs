@@ -36,7 +36,6 @@ namespace DiscordBotServer.Services
             await _discordSocketClient.StartAsync();
             await _commandService.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
             _discordSocketClient.Disconnected += Disconnected;
-
         }
 
         private Task Disconnected(Exception arg)

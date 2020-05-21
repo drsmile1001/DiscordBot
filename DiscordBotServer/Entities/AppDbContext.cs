@@ -14,7 +14,9 @@ namespace DiscordBotServer.Entities
             Database.EnsureCreated();
         }
 
-        public virtual DbSet<PresetText> PresetText { get; set; }
+        public virtual DbSet<MessagePreset> MessagePreset { get; set; }
+
+        public virtual DbSet<ReactsPreset> ReactsPreset { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
