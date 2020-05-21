@@ -10,14 +10,14 @@ namespace DiscordBotServer.Entities
         public string Id { get; set; }
 
         /// <summary>
-        /// 查詢用的索引
+        /// 索引
         /// </summary>
         public string Index { get; set; }
 
         /// <summary>
         /// 重複索引的流水號
         /// </summary>
-        public int SubIndex { get; set; }
+        public int SeriesNumber { get; set; }
 
         /// <summary>
         /// 儲存的字串
@@ -27,21 +27,26 @@ namespace DiscordBotServer.Entities
         /// <summary>
         /// 使用次數
         /// </summary>
-        public int UseCount { get; set; }
+        public int CalledCount { get; set; }
 
         /// <summary>
         /// 最後使用時間
         /// </summary>
-        public DateTime LastUseTime { get; set; }
+        public DateTimeOffset LastCalledTime { get; set; }
 
         /// <summary>
         /// 最後的使用者
         /// </summary>
-        public string LastUser { get; set; }
+        public ulong LastCallerId { get; set; }
 
         /// <summary>
         /// 新增的使用者
         /// </summary>
-        public string CreateUser { get; set; }
+        public ulong CreatorId { get; set; }
+
+        /// <summary>
+        /// 建立時間
+        /// </summary>
+        public DateTimeOffset CreatedTime { get; set; }
     }
 }

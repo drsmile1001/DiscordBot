@@ -28,7 +28,7 @@ namespace DiscordBotServer
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-            services.AddDbContext<AppDbContext>(config => config.UseSqlite("Data Source=discord.db"));
+            services.AddDbContext<AppDbContext>(config => config.UseSqlite("Data Source=app-data/discord.db"));
             services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = LogSeverity.Info,
@@ -64,7 +64,7 @@ namespace DiscordBotServer
                 endpoints.MapControllers();
             });
 
-            app.Run(handler => handler.Response.WriteAsync("discord-bot-server"));
+            //app.Run(handler => handler.Response.WriteAsync("discord-bot-server"));
         }
     }
 }

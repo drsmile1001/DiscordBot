@@ -12,8 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DiscordBotServer.Modules
 {
-    [Name("預存字串")]
-    public class PresetTextModule : ModuleBase<SocketCommandContext>
+    [Name("預設訊息")]
+    public class MessagePresetModule : ModuleBase<SocketCommandContext>
     {
         /// <summary>
         ///     內嵌內容一頁要顯示的筆數
@@ -28,7 +28,7 @@ namespace DiscordBotServer.Modules
         /// </summary>
         private const double _similarityThreshold = 0.6;
 
-        public PresetTextModule(IServiceScopeFactory scopeFactory, Random random)
+        public MessagePresetModule(IServiceScopeFactory scopeFactory, Random random)
         {
             _scopeFactory = scopeFactory;
             _random = random;
@@ -100,9 +100,9 @@ namespace DiscordBotServer.Modules
             using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             try
             {
-                found.UseCount += 1;
-                found.LastUseTime = DateTime.Now;
-                found.LastUser = Context.User.Username;
+                found.CalledCount += 1;
+                found.LastCalledTime = DateTimeOffset.UtcNow;
+                found.LastCallerId = Context.User.Id;
                 db.Update(found);
                 db.SaveChanges();
             }
@@ -112,8 +112,8 @@ namespace DiscordBotServer.Modules
             }
 
             return ReplyAsync(foundSimilarity != null
-                ? $"{found.Index} ({foundSimilarity:P}) #{found.SubIndex} {found.Text}"
-                : $"{found.Index} #{found.SubIndex} {found.Text}");
+                ? $"{found.Index} ({foundSimilarity:P}) #{found.SeriesNumber} {found.Text}"
+                : $"{found.Index} #{found.SeriesNumber} {found.Text}");
         }
 
         [Command("presetText")]
@@ -121,7 +121,7 @@ namespace DiscordBotServer.Modules
         [Summary("輸出儲存過的字串")]
         public Task PresetText([Summary("索引")] string index, [Summary("流水號")] [Optional] string subIndex)
         {
-            var userName = Context.User.Username;
+            var userId = Context.User.Id;
             var (founds, similarity) = FoundPresetText(index);
             if (founds == null)
                 return ReplyAsync("沒有預存字串，加點水吧:sweat_drops:");
@@ -136,7 +136,7 @@ namespace DiscordBotServer.Modules
                 if (!int.TryParse(subIndex, out var subIndexInt))
                     return ReplyAsync("流水號必須為整數");
 
-                found = founds.FirstOrDefault(text => text.SubIndex == subIndexInt);
+                found = founds.FirstOrDefault(text => text.SeriesNumber == subIndexInt);
                 if (found == null)
                     return ReplyAsync(similarity != null
                         ? $"找不到 {founds.First().Index} ({similarity:P}) #{subIndex}"
@@ -146,11 +146,11 @@ namespace DiscordBotServer.Modules
             }
 
             //嘗試找到自己設定中最晚使用的
-            found = founds.Where(text => text.CreateUser == userName)
-                        .OrderByDescending(text => text.LastUseTime)
+            found = founds.Where(text => text.CreatorId == userId)
+                        .OrderByDescending(text => text.LastCalledTime)
                         .FirstOrDefault()
                     //再嘗試找到所有人中最晚使用的
-                    ?? founds.OrderByDescending(text => text.LastUseTime)
+                    ?? founds.OrderByDescending(text => text.LastCalledTime)
                         .First();
             return ReplyPresetText(found, similarity);
         }
@@ -167,26 +167,27 @@ namespace DiscordBotServer.Modules
                 .Where(presetText => presetText.Index == index)
                 .ToList();
             var found = pool.Where(presetText => presetText.Text == text &&
-                                                 presetText.CreateUser == Context.User.Username)
-                .OrderByDescending(presetText => presetText.LastUseTime)
+                                                 presetText.CreatorId == Context.User.Id)
+                .OrderByDescending(presetText => presetText.LastCalledTime)
                 .FirstOrDefault();
 
             if (found != null)
-                return ReplyAsync($"已存在預存字串 {index} #{found.SubIndex}");
+                return ReplyAsync($"已存在預存字串 {index} #{found.SeriesNumber}");
 
-            var lastSubIndex = pool.Select(item => item.SubIndex).DefaultIfEmpty(-1).Max() + 1;
+            var lastSubIndex = pool.Select(item => item.SeriesNumber).DefaultIfEmpty(-1).Max() + 1;
             try
             {
                 db.MessagePreset.Add(new MessagePreset
                 {
                     Id = Guid.NewGuid().ToString(),
                     Index = index,
-                    SubIndex = lastSubIndex,
+                    SeriesNumber = lastSubIndex,
                     Text = text,
-                    UseCount = 0,
-                    LastUseTime = DateTime.Now,
-                    CreateUser = Context.User.Username,
-                    LastUser = Context.User.Username
+                    CalledCount = 0,
+                    LastCalledTime = DateTimeOffset.UtcNow,
+                    CreatorId = Context.User.Id,
+                    LastCallerId = Context.User.Id,
+                    CreatedTime = DateTimeOffset.UtcNow
                 });
                 db.SaveChanges();
                 var builder = new EmbedBuilder
@@ -225,7 +226,7 @@ namespace DiscordBotServer.Modules
                 var targets = db.MessagePreset
                     .AsQueryable()
                     .Where(text => text.Index == index)
-                    .OrderBy(item => item.SubIndex)
+                    .OrderBy(item => item.SeriesNumber)
                     .ToList();
                 if (targets.Count == 0)
                     return ReplyAsync($"沒有預存字串的索引為{index}");
@@ -242,11 +243,12 @@ namespace DiscordBotServer.Modules
                 foreach (var presetText in targets.Skip((tabInt - 1) * _tabLength).Take(_tabLength))
                     builder.AddField(x =>
                     {
-                        x.Name = $"#{presetText.SubIndex}";
+                        x.Name = $"#{presetText.SeriesNumber}";
                         x.Value = $"字串:\"{presetText.Text}\"\n" +
-                                  $"使用次數:{presetText.UseCount}\n" +
-                                  $"最後使用時間:{presetText.LastUseTime}\n" +
-                                  $"新增人:{presetText.CreateUser}";
+                                  $"使用次數:{presetText.CalledCount}\n" +
+                                  $"最後使用時間:{presetText.LastCalledTime.LocalDateTime}\n" +
+                                  $"新增人:<@{presetText.CreatorId}>\n" +
+                                  $"新增時間:{presetText.CreatedTime.LocalDateTime}";
                         x.IsInline = false;
                     });
                 return ReplyAsync("", false, builder.Build());
@@ -254,7 +256,7 @@ namespace DiscordBotServer.Modules
             if (!int.TryParse(subIndex, out var subIndexInt))
                 return ReplyAsync("流水號應為整數");
 
-            var found = db.MessagePreset.FirstOrDefault(text => text.Index == index && text.SubIndex == subIndexInt);
+            var found = db.MessagePreset.FirstOrDefault(text => text.Index == index && text.SeriesNumber == subIndexInt);
             if (found == null)
                 return ReplyAsync($"找不到 {index} #{subIndex}");
             var singleBuilder = new EmbedBuilder
@@ -264,9 +266,10 @@ namespace DiscordBotServer.Modules
             }.AddField(x =>
             {
                 x.Name = found.Text;
-                x.Value = $"使用次數:{found.UseCount}\n" +
-                          $"最後使用時間:{found.LastUseTime}\n" +
-                          $"新增人:{found.CreateUser}";
+                x.Value = $"使用次數:{found.CalledCount}\n" +
+                          $"最後使用時間:{found.LastCalledTime.LocalDateTime}\n" +
+                          $"新增人:<@{found.CreatorId}>\n" +
+                          $"新增時間:{found.CreatedTime.LocalDateTime}";
                 x.IsInline = false;
             });
             return ReplyAsync("", false, singleBuilder.Build());
@@ -283,20 +286,20 @@ namespace DiscordBotServer.Modules
             using var scope = _scopeFactory.CreateScope();
             using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var found = db.MessagePreset.FirstOrDefault(text => text.Index == index && text.SubIndex == subIndexInt);
+            var found = db.MessagePreset.FirstOrDefault(text => text.Index == index && text.SeriesNumber == subIndexInt);
             if (found == null)
                 return ReplyAsync($"找不到 {index} #{subIndex}");
 
-            var newSubIndex = db.MessagePreset.AsQueryable()
+            var newSeriesNumber = db.MessagePreset.AsQueryable()
                 .Where(presetText => presetText.Index == newIndex)
-                .Select(preset=>preset.SubIndex)
+                .Select(preset=>preset.SeriesNumber)
                 .DefaultIfEmpty(-1)
                 .Max() + 1;
             found.Index = newIndex;
-            found.SubIndex = newSubIndex;
+            found.SeriesNumber = newSeriesNumber;
             db.Update(found);
             db.SaveChanges();
-            return ReplyAsync($"已更新[{index} #{subIndex}]為[{newIndex} #{newSubIndex}]");
+            return ReplyAsync($"已更新[{index} #{subIndex}]為[{newIndex} #{newSeriesNumber}]");
         }
 
         [Command("randomPresetText")]
@@ -312,8 +315,8 @@ namespace DiscordBotServer.Modules
 
             var found = founds.AsParallel()
                 .GroupBy(item => item.Text)
-                .Select(grouping => grouping.OrderByDescending(item => item.LastUseTime).First())
-                .OrderByDescending(item => item.LastUseTime)
+                .Select(grouping => grouping.OrderByDescending(item => item.LastCalledTime).First())
+                .OrderByDescending(item => item.LastCalledTime)
                 .Select((item, i) => new
                 {
                     Weights = (i * 0.9 / founds.Count + 0.1) * _random.NextDouble(),
@@ -342,17 +345,17 @@ namespace DiscordBotServer.Modules
                 .Select(
                     grouping =>
                     {
-                        var title = grouping.OrderByDescending(item => item.UseCount).First();
-                        var useCount = grouping.Sum(item => item.UseCount);
+                        var title = grouping.OrderByDescending(item => item.CalledCount).First();
+                        var useCount = grouping.Sum(item => item.CalledCount);
                         return new
                         {
-                            Description = $"{title.Index} #{title.SubIndex}",
+                            Description = $"{title.Index} #{title.SeriesNumber}",
                             UseCount = useCount,
                             title.Text,
                             Grouping = grouping.Select(item => new
                             {
                                 item.Index,
-                                item.SubIndex
+                                item.SeriesNumber
                             }).ToList()
                         };
                     }).OrderByDescending(item => item.UseCount).ToList();
@@ -367,7 +370,7 @@ namespace DiscordBotServer.Modules
                 {
                     x.Name = group.Description;
                     var meta = $"使用次數:{group.UseCount}\n"
-                               + group.Grouping.Select(item => $"{item.Index} #{item.SubIndex}")
+                               + group.Grouping.Select(item => $"{item.Index} #{item.SeriesNumber}")
                                    .Aggregate((agg, next) => $"{agg}\n{next}");
                     var allowLength = 1024 - meta.Length - 20;
                     var showText = group.Text.Length >= allowLength
@@ -389,12 +392,12 @@ namespace DiscordBotServer.Modules
             using var scope = _scopeFactory.CreateScope();
             using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var found = db.MessagePreset.AsQueryable()
-                .Where(item => item.Index == index && item.SubIndex == subIndexInt)
+                .Where(item => item.Index == index && item.SeriesNumber == subIndexInt)
                 .FirstOrDefault();
             if (found == null)
                 return ReplyAsync($"找不到 {index} #{subIndex}");
-            if (found.CreateUser != Context.User.Username)
-                return ReplyAsync($"必須由該字串的創建者{found.CreateUser}刪除");
+            if (found.CreatorId != Context.User.Id)
+                return ReplyAsync($"必須由該字串的創建者<@{found.CreatorId}>刪除");
             try
             {
                 db.MessagePreset.Remove(found);
@@ -420,9 +423,9 @@ namespace DiscordBotServer.Modules
             {
                 Title = $"預存字串共{allPresetText.Count}筆索引，指向{toTextCount}筆字串"
             };
-            var creatorGroupingBy = allPresetText.GroupBy(text => text.CreateUser).Select(grouping => new
+            var creatorGroupingBy = allPresetText.GroupBy(text => text.CreatorId).Select(grouping => new
                 {
-                    Creator = grouping.Key,
+                    Creator = $"<@{grouping.Key}>",
                     Count = grouping.Count()
                 })
                 .OrderByDescending(item => item.Count)
@@ -435,21 +438,21 @@ namespace DiscordBotServer.Modules
         [Command("analyzePresetText")]
         [Alias("+.?")]
         [Summary("分析預存字串(建立人)")]
-        public Task AnalyzePresetText([Summary("建立人")] string creator)
+        public Task AnalyzePresetText([Summary("建立人ID")] ulong creatorId)
         {
             using var scope = _scopeFactory.CreateScope();
             using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var presetTexts = db.MessagePreset.AsQueryable()
-                .Where(text => text.CreateUser == creator)
+                .Where(text => text.CreatorId == creatorId)
                 .ToList();
             if (presetTexts.Count == 0)
                 return ReplyAsync("查無此使用者或此使用者未建立任何預存字串");
             var toTextCount = presetTexts.Select(text => text.Text).Distinct().Count();
-            var description = string.Join(',', presetTexts.OrderByDescending(text=>text.UseCount)
-                .Select(text => $"{text.Index}#{text.SubIndex}"));
+            var description = string.Join(',', presetTexts.OrderByDescending(text=>text.CalledCount)
+                .Select(text => $"{text.Index}#{text.SeriesNumber}"));
             var builder = new EmbedBuilder
             {
-                Title = $"{creator}建立的預存字串共{presetTexts.Count}筆索引，指向{toTextCount}筆字串",
+                Title = $"{creatorId}建立的預存字串共{presetTexts.Count}筆索引，指向{toTextCount}筆字串",
                 Description = description.Length > 2048? description.Substring(0,2040) + "..." : description
             };
             return ReplyAsync("", false, builder.Build());
