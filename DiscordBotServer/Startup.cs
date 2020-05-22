@@ -64,7 +64,7 @@ namespace DiscordBotServer
                 endpoints.MapControllers();
             });
 
-            //app.Run(handler => handler.Response.WriteAsync("discord-bot-server"));
+            app.Run(handler => handler.Response.WriteAsync("discord-bot-server"));
         }
     }
 }

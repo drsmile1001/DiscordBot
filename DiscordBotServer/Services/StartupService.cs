@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Reflection;
 using System.Threading;
@@ -13,6 +14,7 @@ namespace DiscordBotServer.Services
     internal class StartupService : IHostedService
     {
         private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger _logger;
         private readonly DiscordSocketClient _discordSocketClient;
         private readonly CommandService _commandService;
         private readonly string _discordToken;
@@ -20,9 +22,11 @@ namespace DiscordBotServer.Services
         public StartupService(DiscordSocketClient discordSocketClient,
             CommandService commandService,
             IConfiguration config,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            ILogger<StartupService> logger)
         {
             _serviceProvider = serviceProvider;
+            _logger = logger;
             _discordSocketClient = discordSocketClient;
             _commandService = commandService;
             _discordToken = config.GetValue<string>("DiscordToken");
@@ -38,9 +42,11 @@ namespace DiscordBotServer.Services
             _discordSocketClient.Disconnected += Disconnected;
         }
 
-        private Task Disconnected(Exception arg)
+        private async Task Disconnected(Exception arg)
         {
-            return _discordSocketClient.StartAsync();
+            _logger.LogError(arg, "意外斷線");
+            await _discordSocketClient.StopAsync();
+            await _discordSocketClient.StartAsync();
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
