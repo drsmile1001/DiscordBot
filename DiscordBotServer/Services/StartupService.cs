@@ -39,14 +39,6 @@ namespace DiscordBotServer.Services
             await _discordSocketClient.LoginAsync(TokenType.Bot, _discordToken);
             await _discordSocketClient.StartAsync();
             await _commandService.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
-            _discordSocketClient.Disconnected += Disconnected;
-        }
-
-        private async Task Disconnected(Exception arg)
-        {
-            _logger.LogError(arg, "意外斷線");
-            await _discordSocketClient.StopAsync();
-            await _discordSocketClient.StartAsync();
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
