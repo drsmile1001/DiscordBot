@@ -1,0 +1,36 @@
+{
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Debug",
+      "Override": {
+        "Microsoft": "Information",
+        "System": "Information"
+      }
+    },
+    "Enrich": [
+      "FromLogContext",
+      "WithMachineName",
+      "WithThreadId",
+      "WithClientIp",
+      "WithClientAgent"
+    ],
+    "WriteTo": {
+      "ConsoleSink": {
+        "Name": "Console",
+        "Args": {
+          "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}",
+          "theme": "Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme::Literate, Serilog.Sinks.Console"
+        }
+      },
+      "FileSink": {
+        "Name": "File",
+        "Args": {
+          "path": "./logs/log.clef",
+          "rollingInterval": "Hour",
+          "retainedFileCountLimit": 48,
+          "formatter": "Serilog.Formatting.Compact.CompactJsonFormatter, Serilog.Formatting.Compact"
+        }
+      }
+    }
+  }
+}

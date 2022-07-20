@@ -1,48 +1,73 @@
-using System;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
+using DiscordBotServer.Entities;
+using DiscordBotServer.Services;
+using DiscordBotServer.Utilities;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
-using Serilog.Events;
-using Serilog.Filters;
-using Serilog.Formatting.Compact;
-using Serilog.Sinks.SystemConsole.Themes;
 
-namespace DiscordBotServer
+var logConfiguration = GetLoggerConfiguration(args);
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(logConfiguration)
+    .CreateLogger();
+
+try
 {
-    public class Program
+    var builder = WebApplication.CreateBuilder(args);
+    builder.Host.ConfigureAppConfiguration(c =>
     {
-        public static void Main(string[] args)
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+        var sourceBeforeEnvJson = new Stack<IConfigurationSource>();
+
+        while (true)
         {
-            var logConfig = new LoggerConfiguration()
-                .Enrich.FromLogContext()
-                .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}{NewLine}", theme: AnsiConsoleTheme.Literate)
-                .WriteTo.File(new CompactJsonFormatter(), @"app-data/.clef", rollingInterval: RollingInterval.Day, shared: true);
-            Log.Logger = logConfig.CreateLogger();
-            try
-            {
-                CreateHostBuilder(args).Build().Run();
-            }
-            catch (Exception ex)
-            {
-                Log.Fatal(ex, "Host terminated unexpectedly");
-            }
-            finally
-            {
-                Log.CloseAndFlush();
-            }
+            var source = c.Sources[^1];
+            if (source is Microsoft.Extensions.Configuration.Json.JsonConfigurationSource jsonSource
+                && jsonSource.Path == $"appsettings.{environment}.json") break;
+            sourceBeforeEnvJson.Push(source);
+            c.Sources.RemoveAt(c.Sources.Count - 1);
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((hostingContext, config) =>
-                {
-                    config.AddEnvironmentVariables("APP_");
-                })
-                .UseSerilog()
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
-    }
+        c.AddJsonFile($"appsettings.{environment}.local.json", optional: true, reloadOnChange: true);
+
+        while (sourceBeforeEnvJson.TryPop(out var source))
+        {
+            c.Add(source);
+        }
+    });
+    builder.Host.UseSerilog();
+    builder.Services.AddDbContext<AppDbContext>(config => config.UseSqlite("Data Source=data/discord.db"));
+    builder.Services.AddSingletonHostedService<DiscordClientHost>();
+    builder.Services.AddHostedService<CommandHost>();
+
+    var app = builder.Build();
+    app.MapGet("/", () => "Discord Bot Server");
+    app.MapPost("/api/MessagePresetsBatch", async (MessagePreset[] inputs, AppDbContext context) =>
+    {
+        context.MessagePreset.AddRange(inputs);
+        await context.SaveChangesAsync();
+        return Results.Ok();
+    });
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Host terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
+static IConfiguration GetLoggerConfiguration(string[] args)
+{
+    var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+
+    var configurationBuilder = new ConfigurationBuilder()
+        .SetBasePath(Directory.GetCurrentDirectory())
+        .AddJsonFile("serilog.json", optional: true, reloadOnChange: true)
+        .AddJsonFile($"serilog.{environment}.json", optional: true, reloadOnChange: true);
+
+    configurationBuilder.AddEnvironmentVariables();
+    configurationBuilder.AddCommandLine(args);
+
+    return configurationBuilder.Build();
 }

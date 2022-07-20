@@ -24,3 +24,6 @@
 **/*.db
 LICENSE
 README.md
+DiscordBotServer/data/*
+DiscordBotServer/data/logs/*
+**/*.local.json
