@@ -37,6 +37,7 @@ try
     builder.Services.AddDbContext<AppDbContext>(config => config.UseSqlite("Data Source=data/discord.db"));
     builder.Services.AddSingletonHostedService<DiscordClientHost>();
     builder.Services.AddHostedService<CommandHost>();
+    builder.Services.AddHostedService<PTTPreviewerHost>();
 
     var app = builder.Build();
     app.MapGet("/", () => "Discord Bot Server");
