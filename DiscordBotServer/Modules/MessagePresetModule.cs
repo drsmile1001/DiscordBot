@@ -96,12 +96,19 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
         }
         catch (Exception e)
         {
-            return ReplyAsync(e.Message);
+            return ReplyToCommand(e.Message);
         }
 
-        return ReplyAsync(foundSimilarity != null
+        return ReplyToCommand(foundSimilarity != null
             ? $"{found.Index} ({foundSimilarity:P}) #{found.SeriesNumber} {found.Text}"
             : $"{found.Index} #{found.SeriesNumber} {found.Text}");
+    }
+
+    private async Task ReplyToCommand(string? message = null, Embed? embed = null)
+    {
+        await Context.Message.ReplyAsync(message,
+                                         embed: embed,
+                                         allowedMentions: AllowedMentions.None);
     }
 
     [Command("presetText")]
@@ -112,9 +119,9 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
         var userId = Context.User.Id;
         var (founds, similarity) = FoundPresetText(index);
         if (founds.Length == 0)
-            return ReplyAsync("沒有預存字串，加點水吧:sweat_drops:");
+            return ReplyToCommand("沒有預存字串，加點水吧:sweat_drops:");
         if (similarity < _similarityThreshold)
-            return ReplyAsync("找不到接近的 怕:confounded:");
+            return ReplyToCommand("找不到接近的 怕:confounded:");
 
         MessagePreset? found;
 
@@ -122,11 +129,11 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
         if (subIndex != null)
         {
             if (!int.TryParse(subIndex, out var subIndexInt))
-                return ReplyAsync("流水號必須為整數");
+                return ReplyToCommand("流水號必須為整數");
 
             found = founds.FirstOrDefault(text => text.SeriesNumber == subIndexInt);
             if (found == null)
-                return ReplyAsync(similarity != null
+                return ReplyToCommand(similarity != null
                     ? $"找不到 {founds.First().Index} ({similarity:P}) #{subIndex}"
                     : $"找不到 {founds.First().Index} #{subIndex}");
 
@@ -159,7 +166,7 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
             .FirstOrDefault();
 
         if (found != null)
-            return ReplyAsync($"已存在預存字串 {index} #{found.SeriesNumber}");
+            return ReplyToCommand($"已存在預存字串 {index} #{found.SeriesNumber}");
 
         var lastSubIndex = pool.Select(item => item.SeriesNumber).DefaultIfEmpty(-1).Max() + 1;
         try
@@ -180,11 +187,11 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
                 Title = $"已新增預存字串 {index} #{lastSubIndex}",
                 Description = text
             };
-            return ReplyAsync(string.Empty, false, builder.Build());
+            return ReplyToCommand(string.Empty, builder.Build());
         }
         catch (Exception ex)
         {
-            return ReplyAsync($"新增時發生錯誤：{ex.Message}");
+            return ReplyToCommand($"新增時發生錯誤：{ex.Message}");
         }
     }
 
@@ -214,7 +221,7 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
                 .OrderBy(item => item.SeriesNumber)
                 .ToList();
             if (targets.Count == 0)
-                return ReplyAsync($"沒有預存字串的索引為{index}");
+                return ReplyToCommand($"沒有預存字串的索引為{index}");
             if (!int.TryParse(tab, out var tabInt))
                 tabInt = 1;
 
@@ -238,14 +245,14 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
                     x.IsInline = false;
                 });
             }
-            return ReplyAsync(string.Empty, false, builder.Build());
+            return ReplyToCommand(string.Empty, builder.Build());
         }
         if (!int.TryParse(subIndex, out var subIndexInt))
-            return ReplyAsync("流水號應為整數");
+            return ReplyToCommand("流水號應為整數");
 
         var found = db.MessagePreset.FirstOrDefault(text => text.Index == index && text.SeriesNumber == subIndexInt);
         if (found == null)
-            return ReplyAsync($"找不到 {index} #{subIndex}");
+            return ReplyToCommand($"找不到 {index} #{subIndex}");
         var singleBuilder = new EmbedBuilder
         {
             Title = $"{index} #{subIndex}",
@@ -259,7 +266,7 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
                       $"新增時間:{found.CreatedTimeText}";
             x.IsInline = false;
         });
-        return ReplyAsync(string.Empty, false, singleBuilder.Build());
+        return ReplyToCommand(string.Empty, singleBuilder.Build());
     }
 
     [Command("editPresetText")]
@@ -269,13 +276,13 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
         [Summary("新索引")] string newIndex)
     {
         if (!int.TryParse(subIndex, out var subIndexInt))
-            return ReplyAsync("流水號應為整數");
+            return ReplyToCommand("流水號應為整數");
         using var scope = _scopeFactory.CreateScope();
         using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var found = db.MessagePreset.FirstOrDefault(text => text.Index == index && text.SeriesNumber == subIndexInt);
         if (found == null)
-            return ReplyAsync($"找不到 {index} #{subIndex}");
+            return ReplyToCommand($"找不到 {index} #{subIndex}");
 
         var newSeriesNumber = db.MessagePreset.AsQueryable()
             .Where(presetText => presetText.Index == newIndex)
@@ -286,7 +293,7 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
         found.SeriesNumber = newSeriesNumber;
         db.Update(found);
         db.SaveChanges();
-        return ReplyAsync($"已更新[{index} #{subIndex}]為[{newIndex} #{newSeriesNumber}]");
+        return ReplyToCommand($"已更新[{index} #{subIndex}]為[{newIndex} #{newSeriesNumber}]");
     }
 
     [Command("randomPresetText")]
@@ -296,9 +303,9 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
     {
         var (founds, similarity) = FoundPresetText(index);
         if (founds.Length == 0)
-            return ReplyAsync("沒有預存字串，加點水吧:sweat_drops:");
+            return ReplyToCommand("沒有預存字串，加點水吧:sweat_drops:");
         if (similarity < _similarityThreshold)
-            return ReplyAsync("找不到接近的 怕:confounded:");
+            return ReplyToCommand("找不到接近的 怕:confounded:");
 
         var found = founds.AsParallel()
             .GroupBy(item => item.Text)
@@ -366,7 +373,7 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
                 x.Value = $"字串:{showText}\n" + meta;
                 x.IsInline = false;
             });
-        return ReplyAsync(string.Empty, false, builder.Build());
+        return ReplyToCommand(string.Empty, builder.Build());
     }
 
     [Command("deletePresetText")]
@@ -375,23 +382,23 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
     public Task DeletePresetText([Summary("索引")] string index, [Summary("流水號")] string subIndex)
     {
         if (!int.TryParse(subIndex, out var subIndexInt))
-            return ReplyAsync("必須輸入整數流水號");
+            return ReplyToCommand("必須輸入整數流水號");
         using var scope = _scopeFactory.CreateScope();
         using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var found = db.MessagePreset.AsQueryable()
             .Where(item => item.Index == index && item.SeriesNumber == subIndexInt)
             .FirstOrDefault();
         if (found == null)
-            return ReplyAsync($"找不到 {index} #{subIndex}");
+            return ReplyToCommand($"找不到 {index} #{subIndex}");
         try
         {
             db.MessagePreset.Remove(found);
             db.SaveChanges();
-            return ReplyAsync($"已刪除 {index} #{subIndex}");
+            return ReplyToCommand($"已刪除 {index} #{subIndex}");
         }
         catch (Exception e)
         {
-            return ReplyAsync(e.Message);
+            return ReplyToCommand(e.Message);
         }
     }
 
@@ -417,7 +424,7 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
             .ToList();
         foreach (var item in creatorGroupingBy)
             builder.AddField(item.Creator, $"{item.Count}筆", true);
-        return ReplyAsync(string.Empty, false, builder.Build());
+        return ReplyToCommand(string.Empty, builder.Build());
     }
 
     [Command("analyzePresetText")]
@@ -431,7 +438,7 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
             .Where(text => text.CreatorId == creatorId)
             .ToList();
         if (presetTexts.Count == 0)
-            return ReplyAsync("查無此使用者或此使用者未建立任何預存字串");
+            return ReplyToCommand("查無此使用者或此使用者未建立任何預存字串");
         var toTextCount = presetTexts.Select(text => text.Text).Distinct().Count();
         var description = string.Join(',', presetTexts.OrderByDescending(text => text.CalledCount)
             .Select(text => $"{text.Index}#{text.SeriesNumber}"));
@@ -440,6 +447,6 @@ public class MessagePresetModule : ModuleBase<SocketCommandContext>
             Title = $"{creatorId}建立的預存字串共{presetTexts.Count}筆索引，指向{toTextCount}筆字串",
             Description = description.Length > 2048 ? description.Substring(0, 2040) + "..." : description
         };
-        return ReplyAsync(string.Empty, false, builder.Build());
+        return ReplyToCommand(string.Empty, builder.Build());
     }
 }

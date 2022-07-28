@@ -8,13 +8,10 @@ namespace DiscordBotServer.Services;
 public class PTTPreviewerHost : IHostedService
 {
     private readonly DiscordClientHost _clientHost;
-    private readonly ILogger _logger;
 
-    public PTTPreviewerHost(DiscordClientHost clientHost,
-                       ILogger<PTTPreviewerHost> logger)
+    public PTTPreviewerHost(DiscordClientHost clientHost)
     {
         _clientHost = clientHost;
-        _logger = logger;
         _clientHost.Client.MessageReceived += OnMessageReceivedAsync;
     }
 
@@ -58,10 +55,10 @@ public class PTTPreviewerHost : IHostedService
         var title = contentDoc.DocumentNode.Descendants("meta").First(m => m.Attributes["property"]?.Value == "og:title")
             .Attributes["content"].Value;
 
-        await msg.Channel.SendMessageAsync(embed: new EmbedBuilder()
+        await msg.ReplyAsync(embed: new EmbedBuilder()
             .WithTitle(title)
             .WithDescription(description)
             .WithUrl(msg.Content)
-            .Build());
+            .Build(), allowedMentions: AllowedMentions.None);
     }
 }

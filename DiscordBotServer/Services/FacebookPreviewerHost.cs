@@ -7,13 +7,10 @@ namespace DiscordBotServer.Services;
 public class FacebookPreviewerHost : IHostedService
 {
     private readonly DiscordClientHost _clientHost;
-    private readonly ILogger _logger;
 
-    public FacebookPreviewerHost(DiscordClientHost clientHost,
-                       ILogger<PTTPreviewerHost> logger)
+    public FacebookPreviewerHost(DiscordClientHost clientHost)
     {
         _clientHost = clientHost;
-        _logger = logger;
         _clientHost.Client.MessageReceived += OnMessageReceivedAsync;
     }
 
@@ -45,11 +42,15 @@ public class FacebookPreviewerHost : IHostedService
         var title = contentDoc.DocumentNode.Descendants("meta").First(m => m.Attributes["property"]?.Value == "og:title")
             .Attributes["content"].Value;
 
-
-        await msg.Channel.SendMessageAsync(embed: new EmbedBuilder()
+        await msg.ReplyAsync(embed: new EmbedBuilder()
             .WithTitle(HtmlEntity.DeEntitize(title))
             .WithDescription(HtmlEntity.DeEntitize(description))
             .WithUrl(msg.Content)
-            .Build());
+            .Build(), allowedMentions: AllowedMentions.None);
+
+        await msg.ModifyAsync(p =>
+        {
+            p.Flags = MessageFlags.SuppressEmbeds;
+        });
     }
 }

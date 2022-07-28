@@ -67,7 +67,7 @@ public class CommandHost : IHostedService
     {
         var result = await _commandService.ExecuteAsync(context, input, _serviceProvider);
         if (result.IsSuccess) return;
-        await context.Channel.SendMessageAsync(result.ErrorReason);
+        await context.Message.ReplyAsync(result.ErrorReason, allowedMentions: AllowedMentions.None);
     }
 
     private Task Log(LogMessage arg)
