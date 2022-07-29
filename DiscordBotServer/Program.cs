@@ -39,6 +39,7 @@ try
     builder.Services.AddHostedService<CommandHost>();
     builder.Services.AddHostedService<PTTPreviewerHost>();
     builder.Services.AddHostedService<FacebookPreviewerHost>();
+    builder.Services.AddHostedService<AutoLagHost>();
 
     var app = builder.Build();
     app.MapGet("/", () => "Discord Bot Server");

@@ -13,4 +13,6 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<MessagePreset> MessagePreset { get; set; } = null!;
 
     public virtual DbSet<ReactsPreset> ReactsPreset { get; set; } = null!;
+
+    public virtual DbSet<ShareLinkLog> ShareLinkLog { get; set; } = null!;
 }
