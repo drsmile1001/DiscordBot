@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Discord;
 using Discord.WebSocket;
 using Flurl.Http;
@@ -8,6 +9,8 @@ namespace DiscordBotServer.Services;
 public class PTTPreviewerHost : IHostedService
 {
     private readonly DiscordClientHost _clientHost;
+
+    private readonly Regex _linkRegex = new(@"https://www.ptt.cc/bbs/\S+");
 
     public PTTPreviewerHost(DiscordClientHost clientHost)
     {
@@ -32,9 +35,10 @@ public class PTTPreviewerHost : IHostedService
         if (msg.Author.Id == _clientHost.Client.CurrentUser.Id) return;
         if (msg.Author.IsBot) return;
 
-        if (!msg.Content.StartsWith("https://www.ptt.cc/bbs")) return;
+        var match = _linkRegex.Match(msg.Content);
+        if (!match.Success) return;
 
-        var checkHtml = await msg.Content
+        var checkHtml = await match.Value
             .GetStringAsync();
 
         var checkDoc = new HtmlDocument();
@@ -42,7 +46,7 @@ public class PTTPreviewerHost : IHostedService
 
         if (checkDoc.DocumentNode.Descendants("div").All(m => m.Attributes["class"]?.Value != "over18-notice")) return;
 
-        var contentHtml = await msg.Content
+        var contentHtml = await match.Value
             .WithCookie("over18", "1")
             .GetStringAsync();
 
@@ -58,7 +62,7 @@ public class PTTPreviewerHost : IHostedService
         await msg.ReplyAsync(embed: new EmbedBuilder()
             .WithTitle(title)
             .WithDescription(description)
-            .WithUrl(msg.Content)
+            .WithUrl(match.Value)
             .Build(), allowedMentions: AllowedMentions.None);
     }
 }

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Discord;
 using Discord.WebSocket;
 using HtmlAgilityPack;
@@ -7,6 +8,7 @@ namespace DiscordBotServer.Services;
 public class FacebookPreviewerHost : IHostedService
 {
     private readonly DiscordClientHost _clientHost;
+    private readonly Regex _linkRegex = new(@"https://www.facebook.com\S+");
 
     public FacebookPreviewerHost(DiscordClientHost clientHost)
     {
@@ -31,10 +33,11 @@ public class FacebookPreviewerHost : IHostedService
         if (msg.Author.Id == _clientHost.Client.CurrentUser.Id) return;
         if (msg.Author.IsBot) return;
 
-        if (!msg.Content.StartsWith("https://www.facebook.com")) return;
+        var match = _linkRegex.Match(msg.Content);
+        if (!match.Success) return;
 
         var web = new HtmlWeb();
-        var contentDoc = web.Load(msg.Content);
+        var contentDoc = web.Load(match.Value);
 
         var description = contentDoc.DocumentNode.Descendants("meta").First(m => m.Attributes["name"]?.Value == "description")
             .Attributes["content"].Value;
@@ -45,7 +48,7 @@ public class FacebookPreviewerHost : IHostedService
         await msg.ReplyAsync(embed: new EmbedBuilder()
             .WithTitle(HtmlEntity.DeEntitize(title))
             .WithDescription(HtmlEntity.DeEntitize(description))
-            .WithUrl(msg.Content)
+            .WithUrl(match.Value)
             .Build(), allowedMentions: AllowedMentions.None);
 
         await msg.ModifyAsync(p =>
